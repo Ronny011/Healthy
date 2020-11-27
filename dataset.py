@@ -9,7 +9,8 @@ dataset = pd.DataFrame()
 path = 'dataset'
 # user index and counter
 i = 0
-j = 22  # for console purposes
+
+j = 22  # for console purposes - number of volunteers/users
 # recursively scanning the path top-down
 for root, dirs, files in os.walk(path):
     # initializing temporary dataframes
@@ -40,22 +41,7 @@ for root, dirs, files in os.walk(path):
             tempGraphDF = pd.read_csv(directory)
             # dropping unneeded columns
             tempGraphDF.drop(columns=['Axis1', 'Axis2', 'Axis3', 'Vector Magnitude'], inplace=True)
-            # column reduction
-            # first we add the new column - Inc for all inclinometer values
-            tempGraphDF.insert(2, 'Inc', -1)
 
-            # setting the conditions - if that column has 1 or 0...
-            conditions = [tempGraphDF['Inclinometer Off'] == 1,
-                          (tempGraphDF['Inclinometer Lying'] == 1),
-                          (tempGraphDF['Inclinometer Sitting'] == 1),
-                          (tempGraphDF['Inclinometer Standing'] == 1)]
-            # ...then insert a corresponding indicator
-            choices = ['0', '1', '2', '3']  # off, lying, sitting, standing
-            tempGraphDF['Inc'] = np.select(conditions, choices, default=np.nan)
-
-            # we can now drop the old columns
-            tempGraphDF.drop(columns=['Inclinometer Off', 'Inclinometer Lying',
-                                      'Inclinometer Sitting', 'Inclinometer Standing'], inplace=True)
             # adding the average daily steps - if the entire table has only 1 day
             tempGraphDF.insert(1, 'ADS', tempGraphDF['Steps'].sum())
             tempGraphDF.drop(columns=['Steps'], inplace=True)
@@ -79,20 +65,38 @@ for root, dirs, files in os.walk(path):
                 '''
                 # implementing the query
                 finalDF = ps.sqldf(sqlcode, locals())
-
+                # renaming activities
+                conditions = [finalDF['Activity'] == 0, finalDF['Activity'] == 1, finalDF['Activity'] == 2,
+                              finalDF['Activity'] == 3, finalDF['Activity'] == 4, finalDF['Activity'] == 5,
+                              finalDF['Activity'] == 6, finalDF['Activity'] == 7, finalDF['Activity'] == 8,
+                              finalDF['Activity'] == 9, finalDF['Activity'] == 10, finalDF['Activity'] == 11,
+                              finalDF['Activity'] == 12]
+                choices = ['sleeping', 'sleeping', 'laying', 'sitting', 'm-light', 'm-medium', 'm-heavy', 'eating',
+                           'su-small', 'su-large', 'caffeine', 'smoking', 'alcohol']
+                finalDF['Activity'] = np.select(conditions, choices, default=np.nan)
+                # classifying time ranges
                 conditions = [(finalDF.time >= '05:00') & (finalDF.time < '11:00'),
                               ((finalDF.time >= '11:00') & (finalDF.time < '15:00')),
                               ((finalDF.time >= '15:00') & (finalDF.time < '22:00')),
                               ((finalDF.time >= '22:00') & (finalDF.time <= '23:59')),
                               (finalDF.time < '05:00')]
-                choices = ['1', '2', '3', '0', '0']
+                choices = ['Morning', 'Noon', 'Evening', 'Night', 'Night']
                 finalDF['time'] = np.select(conditions, choices, default=np.nan)
-
-                cols = [4, 6, 8, 9, 10]
-                finalDF.drop(finalDF.columns[cols], axis=1, inplace=True)
-                # the ID column is deleted twice, let's retrieve it
+                # reducing inclinometer columns
+                finalDF.insert(4, 'Inc', np.nan)
+                conditions = [finalDF['Inclinometer Off'] == 1, finalDF['Inclinometer Lying'] == 1,
+                              finalDF['Inclinometer Sitting'] == 1, finalDF['Inclinometer Standing'] == 1]
+                choices = [np.nan, 'Lying', 'Sitting', 'Standing']
+                finalDF['Inc'] = np.select(conditions, choices, default=np.nan)
+                # columns to delete
+                cols = ['Unnamed: 0', 'Start', 'End', 'Gender', 'day', 'Inclinometer Off', 'Inclinometer Standing',
+                        'Inclinometer Sitting', 'Inclinometer Lying', 'Day']
+                finalDF.drop(finalDF[cols], axis=1, inplace=True)
+                # the ID column is deleted twice, let's retrieve it and set it as dataframe index
                 finalDF.insert(0, 'ID', i)
-                finalDF.rename({'time': 'TOD'})
+                finalDF.set_index('ID', inplace=True)
+                finalDF.rename(columns={'time': 'TOD'}, errors="raise", inplace=True)
+                finalDF.drop_duplicates(inplace=True)
                 print('user', i, 'dataframe generated')
                 dataset = pd.concat([dataset, finalDF])
                 j -= 1
@@ -106,4 +110,3 @@ print('Exporting...')
 dataset.to_csv("Dataset.csv")
 print('')
 print('Done!')
-
