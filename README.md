@@ -1,4 +1,4 @@
-# Healthy
+# "Healthy"
  Predicting individual heart rate values per activity, personal physiology and measurements using 
  a mixed effect (fixed slope, varying intercept) multiple linear regression machine learning model.
  Built using Pandas on Python and R.
