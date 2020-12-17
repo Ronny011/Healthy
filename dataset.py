@@ -100,6 +100,7 @@ for root, dirs, files in os.walk(path):
                 print('user', i, 'dataframe generated')
                 dataset = pd.concat([dataset, finalDF])
                 j -= 1
+
                 print('')
                 print('Added to main dataframe')
                 print('')

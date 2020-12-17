@@ -1,6 +1,7 @@
 import pandas as pd
 from scipy import stats as st
 
+# user id for t-test
 idvar = 3
 df = pd.read_csv('Dataset.csv')
 setA = df['HR'][(df['Activity'] == 'sitting') & (df['ID'] == idvar)]
