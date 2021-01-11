@@ -42,8 +42,8 @@ for root, dirs, files in os.walk(path):
             # dropping unneeded columns
             tempGraphDF.drop(columns=['Axis1', 'Axis2', 'Axis3', 'Vector Magnitude'], inplace=True)
 
-            # adding the average daily steps - if the entire table has only 1 day
-            tempGraphDF.insert(1, 'ADS', tempGraphDF['Steps'].sum())
+            # average daily steps, as we only have one day's observations we only need to sum. division used for scale
+            tempGraphDF.insert(1, 'ADS', tempGraphDF['Steps'].sum()/1000)
             tempGraphDF.drop(columns=['Steps'], inplace=True)
             # filtering outliers and empty hr
             tempGraphDF = tempGraphDF[(tempGraphDF.HR >= 49) & (tempGraphDF.HR <= 200) & (tempGraphDF.HR != np.nan)]
@@ -82,7 +82,7 @@ for root, dirs, files in os.walk(path):
                               (finalDF.time < '05:00')]
                 choices = ['Morning', 'Noon', 'Evening', 'Night', 'Night']
                 finalDF['time'] = np.select(conditions, choices, default=np.nan)
-                # reducing inclinometer columns
+                # reducing inclinometer columns - off is nan so that it is ignored by the model
                 finalDF.insert(4, 'Inc', np.nan)
                 conditions = [finalDF['Inclinometer Off'] == 1, finalDF['Inclinometer Lying'] == 1,
                               finalDF['Inclinometer Sitting'] == 1, finalDF['Inclinometer Standing'] == 1]
@@ -97,6 +97,9 @@ for root, dirs, files in os.walk(path):
                 finalDF.set_index('ID', inplace=True)
                 finalDF.rename(columns={'time': 'TOD'}, errors="raise", inplace=True)
                 finalDF.drop_duplicates(inplace=True)
+                #  dataframe rearrangement
+                print(finalDF)
+                finalDF = finalDF[['Age', 'Height', 'Weight', 'ADS', 'Activity', 'Inc', 'TOD', 'HR']]
                 print('user', i, 'dataframe generated')
                 dataset = pd.concat([dataset, finalDF])
                 j -= 1
